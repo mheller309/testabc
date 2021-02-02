@@ -1,7 +1,7 @@
 import { combineEpics } from "redux-observable";
 
-import playerEpic from "./player";
+import input from "./input";
 
-const epics = combineEpics(...playerEpic);
+const epics = combineEpics(...input);
 
 export default epics;

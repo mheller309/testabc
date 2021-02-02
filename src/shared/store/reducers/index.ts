@@ -1,13 +1,16 @@
 import { combineReducers } from "redux";
 
-import { reducer as playerReducer, actions as playerActions } from "./input";
+import * as input from "./input";
+import * as media from "./media";
 
 const rootReducer = combineReducers({
-  player: playerReducer,
+  input: input.reducer,
+  media: media.reducer,
 });
 
 export const actions = {
-  ...playerActions,
+  ...input.actions,
+  ...media.actions,
 };
 
 export type RootState = ReturnType<typeof rootReducer>;

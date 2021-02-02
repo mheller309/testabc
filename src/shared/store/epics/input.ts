@@ -4,14 +4,15 @@ import { map, debounce, distinctUntilChanged } from "rxjs/operators";
 import { RootState, actions } from "../reducers";
 
 type AllActions = ReturnType<ValueOf<typeof actions>>;
+type UrlChanged = ReturnType<typeof actions.urlChanged>;
 
-export const urlChange: Epic<AllActions, AllActions, RootState> = (action$) => {
+export const urlChange: Epic<AllActions, UrlChanged, RootState> = (action$) => {
   return action$.pipe(
     ofType(actions.inputChanged.type),
     debounce(() =>
       race(timer(2000), action$.pipe(ofType(actions.enterPressed.type)))
     ),
-    map((a) => actions.urlChanged(a.payload)),
+    map((a) => actions.urlChanged((a as UrlChanged).payload)),
     distinctUntilChanged()
   );
 };
