@@ -7,14 +7,16 @@ const Container = styled.div`
 `;
 
 interface ControlProps {
-  onPlayStop: VoidFunction;
+  onPlay: VoidFunction;
+  onStop: VoidFunction;
   onRecord: VoidFunction;
 }
 
-const Controls: React.FC<ControlProps> = ({ onPlayStop, onRecord }) => {
+const Controls: React.FC<ControlProps> = ({ onPlay, onStop, onRecord }) => {
   return (
     <Container>
-      <button onClick={onPlayStop}>PLAY</button>
+      <button onClick={onPlay}>PLAY</button>
+      <button onClick={onStop}>STOP</button>
       <button onClick={onRecord}>Record</button>
     </Container>
   );

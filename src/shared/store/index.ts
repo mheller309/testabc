@@ -9,7 +9,12 @@ const epicMiddleware = createEpicMiddleware<any, any, RootState>();
 
 export const store = configureStore({
   reducer,
-  middleware: getDefaultMiddleware().concat(epicMiddleware),
+  middleware: getDefaultMiddleware({
+    isImmutable: () => false,
+    immutableCheck: {
+      ignoredPaths: ["media.playerRef"],
+    },
+  }).concat(epicMiddleware),
 });
 
 epicMiddleware.run(epics);
