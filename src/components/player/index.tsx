@@ -17,7 +17,7 @@ const StyledReactPlayer = styled(ReactPlayer)`
 const Player = React.forwardRef<ReactPlayer, PlayerProps>(
   ({ url, playing, onDuration, onProgress, volume }, ref) => {
     const _onProgress = useCallback(
-      ({ playedSeconds }) => onProgress(playedSeconds),
+      ({ played }) => onProgress(played),
       [onProgress]
     );
 

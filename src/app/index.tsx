@@ -1,68 +1,66 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useReducer, useRef } from "react";
+import ReactPlayer from "react-player";
+
 import Player from "../components/player";
 import Input from "../components/input";
-import { useAppDispatch } from "../shared/store";
-import { actions } from "../shared/store/reducers";
-import { useSelector } from "react-redux";
-import { selectUrl } from "../shared/store/selectors/input";
-import * as sMedia from "../shared/store/selectors/media";
 import Timebar from "../components/timebar";
 import Controls from "../components/controls";
 
-function App() {
-  const dispatch = useAppDispatch();
-  const url = useSelector(selectUrl);
-  const duration = useSelector(sMedia.selectDuration);
-  const progress = useSelector(sMedia.selectProgress);
-  const playing = useSelector(sMedia.selectPlaying);
-  const playerRef = useSelector(sMedia.selectPlayerRef);
+import { initialState, reducer } from "./state";
 
-  const onInputChange = useCallback(
-    (str) => dispatch(actions.inputChanged(str)),
+function App() {
+  const playerRef = useRef<ReactPlayer>(null);
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  const onTimebarClick = useCallback(
+    (fraction) => {
+      dispatch({ type: "setProgress", payload: fraction });
+      playerRef.current?.seekTo(fraction, "fraction");
+    },
+    [playerRef, dispatch]
+  );
+
+  const onUrlChange = useCallback(
+    (newUrl) => dispatch({ type: "setUrl", payload: newUrl }),
     [dispatch]
   );
 
-  const onEnter = useCallback((str) => dispatch(actions.enterPressed(str)), [
+  const onDuration = useCallback(
+    (newDuration) => dispatch({ type: "setDuration", payload: newDuration }),
+    [dispatch]
+  );
+
+  const onProgress = useCallback(
+    (newProgress) => dispatch({ type: "setProgress", payload: newProgress }),
+    [dispatch]
+  );
+
+  const onRegion = useCallback(
+    (newRegion) => dispatch({ type: "setRegion", payload: newRegion }),
+    [dispatch]
+  );
+
+  const onPlayStop = useCallback(() => dispatch({ type: "togglePlaying" }), [
     dispatch,
   ]);
-
-  const onDuration = useCallback((n) => dispatch(actions.setDuration(n)), [
-    dispatch,
-  ]);
-
-  const onProgress = useCallback((n) => dispatch(actions.setProgress(n)), [
-    dispatch,
-  ]);
-
-  const onPlay = useCallback(() => dispatch(actions.play()), [dispatch]);
-
-  const onStop = useCallback(() => dispatch(actions.stop()), [dispatch]);
-
-  const onRecord = useCallback(() => dispatch(actions.toggleRecording()), [
-    dispatch,
-  ]);
-
-  const onTimebarClick = useCallback((segs) => {
-    onProgress(segs);
-    playerRef.current?.seekTo(segs, "seconds");
-  }, [playerRef, onProgress]);
 
   return (
     <div>
-      <Input onChange={onInputChange} onEnter={onEnter} />
-      <p>url: {url}</p>
+      <Input onChange={onUrlChange} />
+      <p>url: {state.url}</p>
       <Timebar
-        duration={duration}
-        progress={progress}
+        duration={state.duration}
+        progress={state.progress}
         onClick={onTimebarClick}
+        onRegion={onRegion}
       />
-      <Controls onPlay={onPlay} onStop={onStop} onRecord={onRecord} />
+      <Controls onPlayStop={onPlayStop} />
       <Player
         ref={playerRef}
-        url={url}
+        url={state.url}
         onDuration={onDuration}
         onProgress={onProgress}
-        playing={playing}
+        playing={state.playing}
         volume={1}
       />
     </div>
