@@ -1,4 +1,5 @@
-import { Reducer } from "react";
+import { createRef, Reducer, RefObject } from "react";
+import ReactPlayer from "react-player";
 
 type TRegion = { start: number; end: number } | undefined;
 
@@ -8,6 +9,7 @@ export type State = {
   playing: boolean;
   region: TRegion;
   url: string | undefined;
+  playerRef: RefObject<ReactPlayer>;
 };
 
 export const initialState: State = {
@@ -16,6 +18,7 @@ export const initialState: State = {
   playing: false,
   region: undefined,
   url: undefined,
+  playerRef: createRef<ReactPlayer>(),
 };
 
 type ActionWithoutPayload<T> = { type: T };
@@ -26,6 +29,7 @@ type Action =
   | ActionWitPayload<"setUrl", string>
   | ActionWitPayload<"setRegion", TRegion>
   | ActionWitPayload<"setDuration", number>
+  | ActionWitPayload<"setManualProgress", number>
   | ActionWitPayload<"setProgress", number>;
 
 export const reducer: Reducer<State, Action> = (s, a) => {
@@ -34,18 +38,24 @@ export const reducer: Reducer<State, Action> = (s, a) => {
     case "setUrl":
       return { ...s, url: a.payload, playing: false };
     case "togglePlaying":
-      // if (!s.playing) {
-      //   if (!s.region) return
-      //   else return { ...s, playing: true, progress: s.region.start };
-      // }
       return { ...s, playing: !s.playing };
     case "setDuration":
       return { ...s, duration: a.payload };
     case "setProgress":
-      if (s.region && a.payload >= Number(s.region.end)) {
+      if (s.region && a.payload >= s.region.end) {
+        s.playerRef.current?.seekTo(s.region.start);
         return { ...s, progress: s.region.start, playing: false };
       }
       return { ...s, progress: a.payload };
+    case "setManualProgress":
+      if (
+        !s.region ||
+        (a.payload >= s.region.start && a.payload <= s.region.end)
+      ) {
+        s.playerRef.current?.seekTo(a.payload, "fraction");
+        return { ...s, progress: a.payload };
+      }
+      return s;
     case "setRegion":
       return { ...s, region: a.payload };
     default:

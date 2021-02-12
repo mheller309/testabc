@@ -29,7 +29,7 @@ const Input: React.FC<InputProps> = ({ onChange }) => {
 
   useSubscription(onActualChange$, onChange);
 
-  return <input onChange={_onChange} onKeyPress={_onEnter} />;
+  return <input name="youtube url" onChange={_onChange} onKeyPress={_onEnter} />;
 };
 
 export default Input;

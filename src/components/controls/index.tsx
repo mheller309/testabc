@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import styled from "styled-components";
 
 const Container = styled.div`
@@ -7,13 +7,15 @@ const Container = styled.div`
 `;
 
 interface ControlProps {
-  onPlayStop: VoidFunction;
+  onPlayStop: (playing: boolean) => void;
+  playing: boolean;
 }
 
-const Controls: React.FC<ControlProps> = ({ onPlayStop }) => {
+const Controls: React.FC<ControlProps> = ({ onPlayStop, playing }) => {
+  const onClick = useCallback(() => onPlayStop(playing), [onPlayStop, playing]);
   return (
     <Container>
-      <button onClick={onPlayStop}>PLAY/STOP</button>
+      <button onClick={onClick}>PLAY/STOP</button>
       {/* <button onClick={onStop}>STOP</button>
       <button onClick={onRecord}>Record</button> */}
     </Container>

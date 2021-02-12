@@ -6,6 +6,7 @@ import {
   useSubscription,
 } from "observable-hooks";
 import {
+  debounceTime,
   distinctUntilChanged,
   filter,
   map,
@@ -13,6 +14,8 @@ import {
   take,
   takeUntil,
   tap,
+  throttleTime,
+  timestamp,
   withLatestFrom,
 } from "rxjs/operators";
 import styled from "styled-components";
@@ -20,11 +23,11 @@ import * as mouse from "../../shared/obs/mouse";
 
 import Region, { TRegion } from "./region";
 
-const CLICK_HOLD_TIMEOUT = 300;
+const CLICK_HOLD_TIMEOUT = 150;
 
 interface TimebarProps {
   duration: number | undefined;
-  progress: number | undefined;
+  progress: Observable<number>;
   onClick: (x: number) => void;
   onRegion: (r: TRegion) => void;
 }
@@ -53,10 +56,16 @@ const Timebar: React.FC<TimebarProps> = ({
   const svgRef = useRef(null);
   const isAudioLoaded = useMemo(() => duration !== undefined, [duration]);
 
-  const markerPosition = useMemo(() => {
-    if (!progress) return "0px";
-    return `${progress * 100}%`;
-  }, [progress]);
+  const [markerPosition] = useObservableState<string>(
+    () =>
+      progress.pipe(
+        map((v) => {
+          if (!v) return "0px";
+          return `${v * 100}%`;
+        })
+      ),
+    "0px"
+  );
 
   const [onMouseDown, mouseDown$] = useObservableCallback<
     React.MouseEvent<SVGSVGElement, MouseEvent>
@@ -71,12 +80,14 @@ const Timebar: React.FC<TimebarProps> = ({
     filter((v) => v !== undefined) as OperatorFunction<
       number | undefined,
       number
-    >,
-    distinctUntilChanged()
+    >
   );
 
   const click$ = mouseDown$.pipe(
-    switchMap((e) => mouseUp$.pipe(takeUntil(timer(CLICK_HOLD_TIMEOUT))))
+    debounceTime(10),
+    switchMap(() =>
+      mouseUp$.pipe(take(1), takeUntil(timer(CLICK_HOLD_TIMEOUT)))
+    )
   );
 
   const leftClick$ = click$.pipe(

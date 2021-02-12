@@ -1,5 +1,4 @@
-import React, { useCallback, useReducer, useRef } from "react";
-import ReactPlayer from "react-player";
+import React, { useCallback, useReducer } from "react";
 
 import Player from "../components/player";
 import Input from "../components/input";
@@ -7,18 +6,12 @@ import Timebar from "../components/timebar";
 import Controls from "../components/controls";
 
 import { initialState, reducer } from "./state";
+import { useObservableCallback, useObservableState } from "observable-hooks";
+import { debounceTime, map, tap, throttleTime } from "rxjs/operators";
+import { merge } from "rxjs";
 
 function App() {
-  const playerRef = useRef<ReactPlayer>(null);
   const [state, dispatch] = useReducer(reducer, initialState);
-
-  const onTimebarClick = useCallback(
-    (fraction) => {
-      dispatch({ type: "setProgress", payload: fraction });
-      playerRef.current?.seekTo(fraction, "fraction");
-    },
-    [playerRef, dispatch]
-  );
 
   const onUrlChange = useCallback(
     (newUrl) => dispatch({ type: "setUrl", payload: newUrl }),
@@ -30,37 +23,50 @@ function App() {
     [dispatch]
   );
 
-  const onProgress = useCallback(
-    (newProgress) => dispatch({ type: "setProgress", payload: newProgress }),
-    [dispatch]
-  );
-
   const onRegion = useCallback(
     (newRegion) => dispatch({ type: "setRegion", payload: newRegion }),
     [dispatch]
   );
 
-  const onPlayStop = useCallback(() => dispatch({ type: "togglePlaying" }), [
-    dispatch,
-  ]);
+  const [playing, onPlayStop] = useObservableState<boolean>(
+    (e$) => e$.pipe(map((v) => !v)),
+    false
+  );
 
+  const [onPlayerProgress, playerProgress$] = useObservableCallback<number>(
+    (n$) => n$
+  );
+
+  const [onManualProgress, manualProgress$] = useObservableCallback<number>(
+    (n$) =>
+      n$.pipe(
+        tap((n) => {
+          state.playerRef.current?.seekTo(n);
+        })
+      )
+  );
+
+  const progress$ = merge(playerProgress$, manualProgress$).pipe(throttleTime(200));
+
+  console.warn("RENDER");
   return (
     <div>
       <Input onChange={onUrlChange} />
       <p>url: {state.url}</p>
       <Timebar
         duration={state.duration}
-        progress={state.progress}
-        onClick={onTimebarClick}
+        progress={progress$}
+        onClick={onManualProgress}
+        // onClick={onTimebarClick}
         onRegion={onRegion}
       />
-      <Controls onPlayStop={onPlayStop} />
+      <Controls onPlayStop={onPlayStop} playing={playing} />
       <Player
-        ref={playerRef}
+        ref={state.playerRef}
         url={state.url}
         onDuration={onDuration}
-        onProgress={onProgress}
-        playing={state.playing}
+        onProgress={onPlayerProgress}
+        playing={playing}
         volume={1}
       />
     </div>
