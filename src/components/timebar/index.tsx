@@ -1,5 +1,5 @@
-import React, { useMemo, useRef } from "react";
-import { merge, Observable, of, OperatorFunction, timer } from "rxjs";
+import React, { useRef } from "react";
+import { merge, Observable, OperatorFunction, timer } from "rxjs";
 import {
   useObservableCallback,
   useObservableState,
@@ -7,15 +7,11 @@ import {
 } from "observable-hooks";
 import {
   debounceTime,
-  distinctUntilChanged,
   filter,
   map,
   switchMap,
   take,
   takeUntil,
-  tap,
-  throttleTime,
-  timestamp,
   withLatestFrom,
 } from "rxjs/operators";
 import styled from "styled-components";
@@ -26,7 +22,7 @@ import Region, { TRegion } from "./region";
 const CLICK_HOLD_TIMEOUT = 150;
 
 interface TimebarProps {
-  duration: number | undefined;
+  duration$: Observable<number | undefined>;
   progress: Observable<number>;
   onClick: (x: number) => void;
   onRegion: (r: TRegion) => void;
@@ -48,14 +44,13 @@ const Marker = styled.rect`
 `;
 
 const Timebar: React.FC<TimebarProps> = ({
-  duration,
+  duration$,
   progress,
   onClick,
   onRegion,
 }) => {
   const svgRef = useRef(null);
-  const isAudioLoaded = useMemo(() => duration !== undefined, [duration]);
-
+  const duration = useObservableState(duration$);
   const [markerPosition] = useObservableState<string>(
     () =>
       progress.pipe(
@@ -141,7 +136,7 @@ const Timebar: React.FC<TimebarProps> = ({
         onContextMenu={(e) => e.preventDefault()}
         onMouseUp={onMouseUp}
         onMouseDown={onMouseDown}
-        interactable={isAudioLoaded}
+        interactable={duration !== undefined}
       >
         <Marker x={markerPosition} />
         <Region region$={region$} />

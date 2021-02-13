@@ -1,36 +1,30 @@
-import React, { useCallback, useReducer } from "react";
+import React, { useEffect, useRef } from "react";
 
 import Player from "../components/player";
 import Input from "../components/input";
 import Timebar from "../components/timebar";
 import Controls from "../components/controls";
 
-import { initialState, reducer } from "./state";
-import { useObservableCallback, useObservableState } from "observable-hooks";
-import { debounceTime, map, tap, throttleTime } from "rxjs/operators";
-import { merge } from "rxjs";
+import { useObservable, useObservableCallback } from "observable-hooks";
+import { filter, map, tap, throttleTime, withLatestFrom } from "rxjs/operators";
+import { merge, OperatorFunction } from "rxjs";
+import ReactPlayer from "react-player";
+
+type Region = { start: number; end: number };
+type TRegion = Region | undefined;
 
 function App() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const playerRef = useRef<ReactPlayer>(null);
 
-  const onUrlChange = useCallback(
-    (newUrl) => dispatch({ type: "setUrl", payload: newUrl }),
-    [dispatch]
+  const [onUrlChange, url$] = useObservableCallback<string | undefined>(
+    (u$) => u$,
+    undefined
   );
 
-  const onDuration = useCallback(
-    (newDuration) => dispatch({ type: "setDuration", payload: newDuration }),
-    [dispatch]
-  );
+  const [onRegion, region$] = useObservableCallback<TRegion>((d$) => d$);
 
-  const onRegion = useCallback(
-    (newRegion) => dispatch({ type: "setRegion", payload: newRegion }),
-    [dispatch]
-  );
-
-  const [playing, onPlayStop] = useObservableState<boolean>(
-    (e$) => e$.pipe(map((v) => !v)),
-    false
+  const [onDuration, duration$] = useObservableCallback<number | undefined>(
+    (d$) => d$
   );
 
   const [onPlayerProgress, playerProgress$] = useObservableCallback<number>(
@@ -38,36 +32,54 @@ function App() {
   );
 
   const [onManualProgress, manualProgress$] = useObservableCallback<number>(
-    (n$) =>
-      n$.pipe(
-        tap((n) => {
-          state.playerRef.current?.seekTo(n);
-        })
-      )
+    (n$) => n$.pipe(tap((n) => playerRef.current?.seekTo(n)))
   );
 
-  const progress$ = merge(playerProgress$, manualProgress$).pipe(throttleTime(200));
+  const progress$ = merge(playerProgress$, manualProgress$).pipe(
+    throttleTime(200)
+  );
 
-  console.warn("RENDER");
+  const [onPlayStop, manualPlaying$] = useObservableCallback<boolean>((b$) =>
+    b$.pipe(map((v) => !v))
+  );
+  useEffect(() => onPlayStop(false), [onPlayStop]);
+
+  const regionEndPassedByPlayer$ = useObservable<Region>(() =>
+    playerProgress$.pipe(
+      withLatestFrom(region$),
+      filter(([, r]) => r !== undefined) as OperatorFunction<
+        [number, TRegion],
+        [number, Region]
+      >,
+      filter(([v, r]) => v >= r.end),
+      map(([, r]) => r)
+    )
+  );
+
+  const playing$ = merge(
+    manualPlaying$,
+    regionEndPassedByPlayer$.pipe(
+      tap((r) => playerRef.current?.seekTo(r.start)),
+      map(() => false)
+    )
+  );
+
   return (
     <div>
       <Input onChange={onUrlChange} />
-      <p>url: {state.url}</p>
       <Timebar
-        duration={state.duration}
+        duration$={duration$}
         progress={progress$}
         onClick={onManualProgress}
-        // onClick={onTimebarClick}
         onRegion={onRegion}
       />
-      <Controls onPlayStop={onPlayStop} playing={playing} />
+      <Controls onPlayStop={onPlayStop} playing$={playing$} />
       <Player
-        ref={state.playerRef}
-        url={state.url}
+        ref={playerRef}
+        url$={url$}
         onDuration={onDuration}
         onProgress={onPlayerProgress}
-        playing={playing}
-        volume={1}
+        playing$={playing$}
       />
     </div>
   );

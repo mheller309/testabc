@@ -1,13 +1,14 @@
+import { useObservableState } from "observable-hooks";
 import React, { useCallback } from "react";
 import ReactPlayer from "react-player";
+import { Observable } from "rxjs";
 import styled from "styled-components";
 
 interface PlayerProps {
-  url: string | undefined;
+  url$: Observable<string | undefined>;
+  playing$: Observable<boolean>;
   onDuration: (n: number) => void;
   onProgress: (n: number) => void;
-  playing: boolean;
-  volume: number;
 }
 
 const StyledReactPlayer = styled(ReactPlayer)`
@@ -15,11 +16,13 @@ const StyledReactPlayer = styled(ReactPlayer)`
 `;
 
 const Player = React.forwardRef<ReactPlayer, PlayerProps>(
-  ({ url, playing, onDuration, onProgress, volume }, ref) => {
-    const _onProgress = useCallback(
-      ({ played }) => onProgress(played),
-      [onProgress]
-    );
+  ({ url$, playing$, onDuration, onProgress }, ref) => {
+    const _onProgress = useCallback(({ played }) => onProgress(played), [
+      onProgress,
+    ]);
+
+    const url = useObservableState(url$);
+    const playing = useObservableState(playing$);
 
     return (
       <StyledReactPlayer
@@ -29,7 +32,7 @@ const Player = React.forwardRef<ReactPlayer, PlayerProps>(
         controls={false}
         onDuration={onDuration}
         onProgress={_onProgress}
-        volume={volume}
+        volume={1}
       />
     );
   }
