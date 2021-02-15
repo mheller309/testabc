@@ -62,6 +62,17 @@ const Timebar: React.FC<TimebarProps> = ({
     "0px"
   );
 
+  const [onWheel, wheel$] = useObservableCallback<
+    React.MouseEvent<SVGSVGElement, WheelEvent>
+  >((e$) =>
+    e$.pipe(
+      map((e) => {
+        e.stopPropagation();
+        return e;
+      })
+    )
+  );
+
   const [onMouseDown, mouseDown$] = useObservableCallback<
     React.MouseEvent<SVGSVGElement, MouseEvent>
   >((e$) => e$.pipe(map(mouse.preventDefault)));
@@ -127,15 +138,16 @@ const Timebar: React.FC<TimebarProps> = ({
   useSubscription(leftClick$, onClick);
   useSubscription(regionEnd$, onRegion);
   useSubscription(regionClear$, onRegion);
+  useSubscription(wheel$, () => console.warn("WHEEL"));
 
   return (
     <>
-      <p>DURATION: {duration}</p>
       <Svg
         ref={svgRef}
         onContextMenu={(e) => e.preventDefault()}
         onMouseUp={onMouseUp}
         onMouseDown={onMouseDown}
+        onWheel={onWheel}
         interactable={duration !== undefined}
       >
         <Marker x={markerPosition} />
